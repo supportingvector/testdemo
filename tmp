@@ -1,0 +1,85 @@
+class Item{
+    string name;
+    string position;
+    string character;
+    string version;
+}
+
+class CheckResult{
+    string data;
+    bool missing;
+    bool duplicated;
+}
+
+public List<CheckResult> Check(List<Item> items){
+    List<CheckResult> checkResults= new List();
+    foreach(Item item in items){
+        if(item.character!=""){
+            var CheckNameExistsRes=CheckNameExists(item);
+            if(!CheckNameExistsRes){
+               var checkResult=new CheckResult();
+               checkResult.missing = true;
+               checkResult.data = item.name;
+               checkResults.add(checkResult);
+            }
+            var CheckPositionExistsRes=CheckPositionExists(item);
+            if(!CheckPositionExistsRes){
+               var checkResult=new CheckResult();
+               checkResult.missing = true;
+               checkResult.data = item.name;
+               checkResults.add(checkResult);
+            }
+            if(CheckPositionExistsRes && CheckNameExistsRes){
+                checkDuplicatesRes =CheckDuplicates(item);
+                if(!checkDuplicatesRes){
+                    var checkResult=new CheckResult();
+                    checkResult.duplicated = true;
+                    checkResult.data = item.name;
+                    checkResults.add(checkResult);
+                }
+            }
+        }else{
+            var checkActorNameExitsRes =CheckActorNameExits(item);
+            if(!checkActorNameExitsRes){
+               var checkResult=new CheckResult();
+               checkResult.missing = true;
+               checkResult.data = item.name;
+               checkResults.add(checkResult);
+            }
+            if(checkActorNameExitsRes){
+                checkActorDuplicateRes = CheckActorDuplicate(item);
+                if(!checkActorDuplicateRes(item)){
+                    var checkResult=new CheckResult();
+                    checkResult.missing = true;
+                    checkResult.data = item.name;
+                    checkResults.add(checkResult);
+                }
+            }
+        }
+    }
+    if(checkResults.Size==0){
+        InsertItems(Items)
+    }
+} 
+
+public bool CheckNameExists(Item item){
+
+}
+
+public bool CheckPositionExists(Item item, Set positionSet){
+    if(!positionSet.contains(item.position)){
+        return;
+    }
+}
+
+public bool CheckDuplicate(Item item){
+    
+}
+
+public bool CheckActorNameExits(Item){
+
+}
+
+public bool CheckActorDuplicate(Item){
+
+}
