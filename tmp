@@ -1,85 +1,161 @@
-class Item{
-    string name;
-    string position;
-    string character;
-    string version;
-}
+ @Override
+    public List<CrStaffCheckResult> batchInsertCrShowStaff(String batchInput,String showId, String versionName){
+        List<CrStaffRaw> crStaffRawList = parseString(batchInput);
+        List<CrStaffCheckResult> checkResults= Check(crStaffRawList, showId, versionName);
+        if(checkResults.size()==0){
+            InsertItems(crStaffRawList);
+        }
+        return checkResults;
+        //List<String> unsetPositions =  unsetPosition(crStaffRawList);
+    }
 
-class CheckResult{
-    string data;
-    bool missing;
-    bool duplicated;
-}
+    private List<CrStaffRaw> parseString(String batchInput){
+        String[] lines = batchInput.split("nextline");
+        CrOptionList crOptionListQuery =new CrOptionList();
+        crOptionListQuery.setOptionId(6l);
+        List<CrOptionList> crOptionlist = crOptionListService.selectCrOptionListList(crOptionListQuery);
+        HashSet<String> crPositionSet = new HashSet<String>();
+        for (CrOptionList crOption:crOptionlist) {
+            crPositionSet.add(crOption.getName());
+        }
+        List<CrStaffRaw> CrStaffRawList =  new LinkedList<>();
+        for (String line : lines) {
+            String[] parts = line.split(":");
+            if (parts.length == 2 ) {
+                //演员特殊逻辑处理
+                if (parts[0].equals("演员")) {
+                    String[] actors = parts[1].split(",");
+                    for (String actor : actors) {
+                        String[] actorRole = actor.split("=");
 
-public List<CheckResult> Check(List<Item> items){
-    List<CheckResult> checkResults= new List();
-    foreach(Item item in items){
-        if(item.character!=""){
-            var CheckNameExistsRes=CheckNameExists(item);
-            if(!CheckNameExistsRes){
-               var checkResult=new CheckResult();
-               checkResult.missing = true;
-               checkResult.data = item.name;
-               checkResults.add(checkResult);
-            }
-            var CheckPositionExistsRes=CheckPositionExists(item);
-            if(!CheckPositionExistsRes){
-               var checkResult=new CheckResult();
-               checkResult.missing = true;
-               checkResult.data = item.name;
-               checkResults.add(checkResult);
-            }
-            if(CheckPositionExistsRes && CheckNameExistsRes){
-                checkDuplicatesRes =CheckDuplicates(item);
-                if(!checkDuplicatesRes){
-                    var checkResult=new CheckResult();
-                    checkResult.duplicated = true;
-                    checkResult.data = item.name;
-                    checkResults.add(checkResult);
+                        CrStaffRaw crStaffRaw = new CrStaffRaw();
+                        crStaffRaw.name=actorRole[0];
+                        crStaffRaw.character=actorRole[1];
+                        crStaffRaw.position = "演员";
+                        CrStaffRawList.add(crStaffRaw);
+                    }
+                }
+                else {//非演员处理
+                    String[] nameList=parts[1].split(",");
+                    for(int i=0; i< nameList.length; i++) {
+                        String name = nameList[i];
+                        CrStaffRaw crStaffRaw = new CrStaffRaw();
+                        crStaffRaw.name=name;
+                        crStaffRaw.character="";
+                        crStaffRaw.position = parts[0];
+                        CrStaffRawList.add(crStaffRaw);
+                    }
                 }
             }
-        }else{
-            var checkActorNameExitsRes =CheckActorNameExits(item);
-            if(!checkActorNameExitsRes){
-               var checkResult=new CheckResult();
-               checkResult.missing = true;
-               checkResult.data = item.name;
-               checkResults.add(checkResult);
-            }
-            if(checkActorNameExitsRes){
-                checkActorDuplicateRes = CheckActorDuplicate(item);
-                if(!checkActorDuplicateRes(item)){
-                    var checkResult=new CheckResult();
+        }
+        return CrStaffRawList;
+    }
+
+    private List<CrStaffCheckResult> Check(List<CrStaffRaw> items, String showId, String versionName){
+        List<CrStaffCheckResult> checkResults= new LinkedList<>();
+        CrShowRequestStaffDTO crShowRequestStaffDTO = new CrShowRequestStaffDTO();
+        crShowRequestStaffDTO.setShowId(showId);
+        crShowRequestStaffDTO.setVersionName(versionName);
+
+        List<CrShowResponseStaffDTO> crShowResponseStaffDTOList=juMuStaffList(crShowRequestStaffDTO);
+        CrOptionList crOptionListQuery =new CrOptionList();
+        crOptionListQuery.setOptionId(6l);
+        List<CrOptionList> crOptionlist = crOptionListService.selectCrOptionListList(crOptionListQuery);
+        HashSet<String> crPositionSet = new HashSet<String>();
+        for (CrOptionList crOption:crOptionlist) {
+            crPositionSet.add(crOption.getName());
+        }
+
+        for(CrStaffRaw item : items){
+            //查询非演员
+            if(item.character!=""){
+                //查询名称有无添加过
+                boolean CheckNameExistsRes=CheckNameExists(item);
+                if(!CheckNameExistsRes){
+                    CrStaffCheckResult checkResult=new CrStaffCheckResult();
                     checkResult.missing = true;
                     checkResult.data = item.name;
                     checkResults.add(checkResult);
                 }
+
+                //查询职位有无添加过
+                boolean CheckPositionExistsRes=CheckPositionExists(item,crPositionSet);
+                if(!CheckPositionExistsRes){
+                    CrStaffCheckResult checkResult=new CrStaffCheckResult();
+                    checkResult.missing = true;
+                    checkResult.data = item.name;
+                    checkResults.add(checkResult);
+                }
+                //查询当前记录有无这一条重复记录
+                if(CheckPositionExistsRes && CheckNameExistsRes){
+                    boolean checkDuplicatesRes =CheckDuplicate(item, crShowResponseStaffDTOList);
+                    if(checkDuplicatesRes){
+                        CrStaffCheckResult checkResult=new CrStaffCheckResult();
+                        checkResult.duplicated = true;
+                        checkResult.data = item.name;
+                        checkResults.add(checkResult);
+                    }
+                }
+            }else{
+                boolean checkActorNameExitsRes =CheckNameExists(item);
+                if(!checkActorNameExitsRes){
+                    CrStaffCheckResult checkResult=new CrStaffCheckResult();
+                    checkResult.missing = true;
+                    checkResult.data = item.name;
+                    checkResults.add(checkResult);
+                }
+                if(checkActorNameExitsRes){
+                    boolean checkActorDuplicateRes = CheckActorDuplicate(item,crShowResponseStaffDTOList);
+                    if(!checkActorDuplicateRes){
+                        CrStaffCheckResult checkResult=new CrStaffCheckResult();
+                        checkResult.missing = true;
+                        checkResult.data = item.name;
+                        checkResults.add(checkResult);
+                    }
+                }
             }
         }
+        return checkResults;
+
     }
-    if(checkResults.Size==0){
-        InsertItems(Items)
+
+    private boolean CheckNameExists(CrStaffRaw item){
+        List<CrStaff> selectRes=crStaffService.selectCrStaffList1(item.name);
+        if(selectRes.size()>0) return  true;
+        return false;
     }
-} 
 
-public bool CheckNameExists(Item item){
+    private boolean CheckPositionExists(CrStaffRaw item, Set positionSet){
+        if(positionSet.contains(item.position)){
+            return true;
+        }
+        return false;
+    }
+    private boolean CheckDuplicate(CrStaffRaw item,List<CrShowResponseStaffDTO> crShowResponseStaffDTOList){
+        for(CrShowResponseStaffDTO crShowResponseStaffDTO: crShowResponseStaffDTOList){
+            if(item.name == crShowResponseStaffDTO.getStaffName() && crShowResponseStaffDTO.getVersionName() == item.versionName){
+                return true;
+            }
+        }
+        return false;
+    }
 
-}
 
-public bool CheckPositionExists(Item item, Set positionSet){
-    if(!positionSet.contains(item.position)){
+    private boolean CheckActorDuplicate(CrStaffRaw item, List<CrShowResponseStaffDTO> crShowResponseStaffDTOList){
+        for(CrShowResponseStaffDTO crShowResponseStaffDTO: crShowResponseStaffDTOList){
+            if(item.name == crShowResponseStaffDTO.getStaffName() && crShowResponseStaffDTO.getVersionName() == item.versionName && crShowResponseStaffDTO.getRoleName() == item.character){
+                return true;
+            }
+        }
+        return false;
+    }
+    private void InsertItems(List<CrStaffRaw> items){
+        for(CrStaffRaw crStaffRaw: items){
+
+            CrShowStaffRequestDTO crShowStaffRequestDTO = new CrShowStaffRequestDTO();
+
+            insertCrShowStaff(crStaffRaw);
+
+        }
         return;
     }
-}
-
-public bool CheckDuplicate(Item item){
-    
-}
-
-public bool CheckActorNameExits(Item){
-
-}
-
-public bool CheckActorDuplicate(Item){
-
-}
