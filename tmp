@@ -159,3 +159,22 @@
         }
         return;
     }
+
+{
+    "weigh": 100,
+    "status": "2",
+    "remark": "",
+    "crShowRoleDTOList": [
+        {
+            "key": 1722259119833,
+            "roleId": "",
+            "versionId": 3327,
+            "avatar": ""
+        }
+    ],
+    "versionId": 3327,
+    "positionId": 68,
+    "showId": "47822960",
+    "positionId2": 0,
+    "type": 1
+}
