@@ -1,0 +1,75 @@
+Class Boss{
+  public event Action OnSeenBosstriggered;
+  public event Action OnDeathTriggered;
+
+  public void TriggerSeenEvent(){
+    if(OnSeenBosstriggered!=null){
+      OnSeenBosstriggered.Invoke();
+    }
+  }
+
+  public void TriggerDeathEvent(){
+    if(OnDeathTriggered!=null){
+      OnDeathTriggered.Invoke();
+    }
+  }
+
+  public SeenAttackTarget(){
+    ......
+    TriggerSeenEvent();
+    ......
+  }
+  public ProcessDeath(){
+    ......
+    TriggerDeathEvent();
+    ......
+  }
+
+}
+Class BossManager(){
+  public Boss boss;
+  public bool isDefeated;
+  public BossDoor door;
+
+  void OnEnable(){
+      if (boss != null)
+      {
+          boss.OnSeenBosstriggered += ClossDoor;
+          boss.OnDeathTriggered += OpenDoor;
+      }
+  }
+  void OnDisable(){
+      if (boss != null)
+      {
+          boss.OnSeenBosstriggered -= ClossDoor;
+          boss.OnDeathTriggered -= OpenDoor;
+      }
+  }
+
+  private void ClossDoor(){
+      door.Close();
+  }
+
+  private void OpenDoor(){
+      door.Close();
+  }
+
+}
+
+Class BossDoor{
+  public GameObject normalDoor;
+  public GameObject closedDoor;
+  public MyaduioSource myaudiosource;
+  public void Start(){
+      closedDoor.SetActive(false);
+      NormalDoor.SetActive(true);
+  }
+
+  public void Close(){
+      closedDoor.SetActive(true);
+      NormalDoor.SetActive(false);
+      SoundManager.Instance.playsoundEffect(myaudiosource,SoundAssets.doorEffect);
+  }
+
+
+}
