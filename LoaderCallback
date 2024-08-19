@@ -1,0 +1,13 @@
+public class LoaderCallback:Monobehavior
+{
+  private bool isFirstUpdate = true;
+
+  private void Update(){
+    if(isFirstUpdate){
+      isFirstUpdate = false;
+      Loader.LoaderCallback();
+    }
+
+  }
+
+}
